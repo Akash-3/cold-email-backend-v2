@@ -1,42 +1,41 @@
+import os
 import json
 import re
-import os
+
+from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.prompts import PromptTemplate
-from dotenv import load_dotenv
+
+# Load .env locally (ignored on Render)
 load_dotenv()
 
-def clean_json_output(text: str) -> str:
-    """
-    Removes markdown code fences like ```json ... ```
-    """
-    # Remove ```json and ```
-    text = re.sub(r"```json", "", text)
-    text = re.sub(r"```", "", text)
-    return text.strip()
-
-# -------- READ API KEY FROM FILE --------
-def load_groq_key():
-    with open("groq_key.txt", "r") as f:
-        return f.read().strip()
-
-GROQ_API_KEY = load_groq_key()
-
-# -------- INIT LLM --------
+# Initialize LLM using environment variable
 llm = ChatGroq(
     temperature=0,
     groq_api_key=os.getenv("GROQ_API_KEY"),
     model_name="llama-3.3-70b-versatile"
 )
 
+
+def clean_json_output(text: str) -> str:
+    """
+    Removes markdown code fences like ```json ... ```
+    """
+    text = re.sub(r"```json", "", text)
+    text = re.sub(r"```", "", text)
+    return text.strip()
+
+
 def extract_job_details(job_url: str) -> dict:
     try:
+        # Load webpage
         loader = WebBaseLoader(job_url)
         docs = loader.load()
         page_data = docs[0].page_content
 
-        prompt_extract = PromptTemplate.from_template(
+        # Prompt to extract structured job data
+        prompt = PromptTemplate.from_template(
             """
             You are an information extraction system.
 
@@ -50,14 +49,14 @@ def extract_job_details(job_url: str) -> dict:
             TEXT:
             {page_data}
 
-            IMPORTANT:
+            RULES:
             - Return ONLY JSON
             - No markdown
             - No explanation
             """
         )
 
-        chain = prompt_extract | llm
+        chain = prompt | llm
         response = chain.invoke({"page_data": page_data})
 
         raw_output = response.content.strip()
@@ -65,17 +64,20 @@ def extract_job_details(job_url: str) -> dict:
 
         parsed = json.loads(cleaned_output)
 
+        # Validate expected keys
         required_keys = {"role", "experience", "skills", "description"}
         if not required_keys.issubset(parsed.keys()):
-            raise ValueError("Missing required keys")
+            raise ValueError("Missing required keys in LLM output")
 
         return parsed
 
     except json.JSONDecodeError:
         return {
-            "error": "Invalid JSON after cleaning",
+            "error": "LLM returned invalid JSON",
             "raw_output": raw_output
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }
