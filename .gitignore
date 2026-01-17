@@ -1,0 +1,22 @@
+# -------- Secrets --------
+.env
+groq_key.txt
+
+# -------- Python --------
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# -------- Jupyter --------
+.ipynb_checkpoints/
+
+# -------- OS --------
+.DS_Store
+Thumbs.db
+
+# -------- Node / Frontend (if present) --------
+node_modules/
+dist/
+build/
