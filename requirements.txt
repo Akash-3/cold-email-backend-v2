@@ -6,3 +6,9 @@ langchain-groq
 requests
 beautifulsoup4
 python-dotenv
+passlib
+psycopg2-binary
+PyJWT
+
+
+

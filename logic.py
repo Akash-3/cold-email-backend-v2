@@ -2,18 +2,19 @@ import os
 import json
 import re
 
-from dotenv import load_dotenv
+
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.prompts import PromptTemplate
 
 # Load .env locally (ignored on Render)
-load_dotenv()
+
 
 # Initialize LLM using environment variable
 llm = ChatGroq(
     temperature=0,
     groq_api_key=os.getenv("GROQ_API_KEY"),
+    groq_api_Key=os.getenv("GROQ_API_KEY"),
     model_name="llama-3.3-70b-versatile"
 )
 

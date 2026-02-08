@@ -1,6 +1,9 @@
 # -------- Secrets --------
 .env
+*.env
 groq_key.txt
+config.json
+secrets.json
 
 # -------- Python --------
 .venv/
@@ -8,14 +11,25 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
+.mypy_cache/
 
 # -------- Jupyter --------
 .ipynb_checkpoints/
 *.ipynb
 
+# -------- Logs / Debug --------
+*.log
+email_debug.txt
+reset_tokens.txt
+
 # -------- OS --------
 .DS_Store
 Thumbs.db
+
+# -------- Editors --------
+.vscode/
+.idea/
 
 # -------- Node / Frontend (if present) --------
 node_modules/
