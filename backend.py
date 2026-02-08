@@ -12,13 +12,16 @@ from email_service import send_reset_email
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGO = "HS256"
 
+
+
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://coldemailgenerator2.netlify.app/"],
-    allow_methods=["https://coldemailgenerator2.netlify.app/"],
-    allow_headers=["https://coldemailgenerator2.netlify.app/"],
+    allow_origins=["http://localhost:5173","https://cold-email.onrender.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ---------- MODELS ----------
@@ -53,6 +56,12 @@ def create_token(email: str):
 
 
 # ---------- AUTH ----------
+@app.get("/")
+def health():
+    return {
+        "status": "ok",
+        "service": "cold-email-backend"
+    }
 
 @app.post("/signup")
 def signup(data: Auth):
