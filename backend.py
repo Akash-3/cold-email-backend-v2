@@ -8,6 +8,8 @@ from database import conn, cursor
 from security import hash_password, verify_password
 from logic import extract_job_details, generate_cold_email
 from email_service import send_reset_email
+from datetime import datetime, timedelta
+import secrets
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGO = "HS256"
@@ -114,18 +116,39 @@ def generate_email(data: EmailRequest):
 
 @app.post("/forgot-password")
 def forgot_password(data: ForgotReq):
+    # Always respond the same (security best practice)
     cursor.execute("SELECT 1 FROM users WHERE email=%s", (data.email,))
-    if not cursor.fetchone():
+    user_exists = cursor.fetchone()
+
+    if not user_exists:
         return {"message": "If email exists, reset link sent"}
 
+    # Generate secure token
     token = secrets.token_urlsafe(32)
+
+    # Token expiry (15 minutes)
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+    # Optional: delete old tokens for this email
     cursor.execute(
-        "INSERT INTO password_resets (email, token) VALUES (%s,%s)",
-        (data.email, token)
+        "DELETE FROM password_resets WHERE email = %s",
+        (data.email,)
     )
+
+    # Insert new reset token
+    cursor.execute(
+        """
+        INSERT INTO password_resets (email, token, expires_at)
+        VALUES (%s, %s, %s)
+        """,
+        (data.email, token, expires_at)
+    )
+
     conn.commit()
 
+    # Send email AFTER DB commit
     send_reset_email(data.email, token)
+
     return {"message": "If email exists, reset link sent"}
 
 
