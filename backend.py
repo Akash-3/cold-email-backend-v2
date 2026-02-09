@@ -116,26 +116,14 @@ def generate_email(data: EmailRequest):
 
 @app.post("/forgot-password")
 def forgot_password(data: ForgotReq):
-    # Always respond the same (security best practice)
     cursor.execute("SELECT 1 FROM users WHERE email=%s", (data.email,))
-    user_exists = cursor.fetchone()
-
-    if not user_exists:
+    if not cursor.fetchone():
+        # security: don't reveal if email exists
         return {"message": "If email exists, reset link sent"}
 
-    # Generate secure token
     token = secrets.token_urlsafe(32)
-
-    # Token expiry (15 minutes)
     expires_at = datetime.utcnow() + timedelta(minutes=15)
 
-    # Optional: delete old tokens for this email
-    cursor.execute(
-        "DELETE FROM password_resets WHERE email = %s",
-        (data.email,)
-    )
-
-    # Insert new reset token
     cursor.execute(
         """
         INSERT INTO password_resets (email, token, expires_at)
@@ -143,10 +131,8 @@ def forgot_password(data: ForgotReq):
         """,
         (data.email, token, expires_at)
     )
-
     conn.commit()
 
-    # Send email AFTER DB commit
     send_reset_email(data.email, token)
 
     return {"message": "If email exists, reset link sent"}

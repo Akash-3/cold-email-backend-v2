@@ -1,32 +1,44 @@
-import smtplib
-from email.message import EmailMessage
 import os
+import requests
 
-SMTP_EMAIL = os.getenv("SMTP_EMAIL")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-FRONTEND_URL = os.getenv("FRONTEND_URL")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+
+RESEND_API_URL = "https://api.resend.com/emails"
+
 
 def send_reset_email(to_email: str, token: str):
-    reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
+    if not RESEND_API_KEY:
+        raise RuntimeError("RESEND_API_KEY not set")
 
-    msg = EmailMessage()
-    msg["Subject"] = "Reset your password"
-    msg["From"] = SMTP_EMAIL
-    msg["To"] = to_email
+    reset_link = f"https://coldemailgenerator2.netlify.app/reset-password?token={token}"
 
-    msg.set_content(f"""
-Hi,
+    payload = {
+        "from": "AI COLD EMAIL GENERATOR <onboarding@resend.dev>",
+        "to": [to_email],
+        "subject": "Reset your password",
+        "html": f"""
+        <p>Hello,</p>
+        <p>You requested to reset your password.</p>
+        <p>
+            <a href="{reset_link}">
+                Click here to reset your password
+            </a>
+        </p>
+        <p>This link will expire in 15 minutes.</p>
+        """
+    }
 
-You requested a password reset.
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-Click the link below to reset your password:
-{reset_link}
+    response = requests.post(
+        RESEND_API_URL,
+        json=payload,
+        headers=headers,
+        timeout=10
+    )
 
-This link will expire in 15 minutes.
-
-If you didn’t request this, you can safely ignore this email.
-""")
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        server.send_message(msg)
+    if response.status_code >= 400:
+        raise RuntimeError(f"Resend error: {response.text}")
