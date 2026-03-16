@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt, os, secrets
+from jwt import ExpiredSignatureError, InvalidTokenError
 
 from database import conn, cursor
 from security import hash_password, verify_password
@@ -13,6 +14,7 @@ import secrets
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGO = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv("ACCESS_TOKEN_EXPIRE_DAYS"))
 
 
 
@@ -52,7 +54,7 @@ class ResetReq(BaseModel):
 def create_token(email: str):
     payload = {
         "sub": email,
-        "exp": datetime.utcnow() + timedelta(days=7)
+        "exp": datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
@@ -93,11 +95,24 @@ def login(data: Auth):
 @app.get("/me")
 def me(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Unauthorized")
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     token = authorization.split()[1]
-    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
-    return {"email": payload["sub"]}
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+        email = payload.get("sub")
+
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        return {"email": email}
+
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired. Please login again.")
+
+    except InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 # ---------- CORE PRODUCT ----------
