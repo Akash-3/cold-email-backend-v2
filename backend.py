@@ -114,6 +114,10 @@ def me(authorization: str = Header(None)):
     except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 
 # ---------- CORE PRODUCT ----------
 
